@@ -16,6 +16,7 @@ namespace nagexym
 {
     public partial class Form1 : Form
     {
+        #region グリッドの列名
         private const string GRID_COLNAME_ACCOUNT = "dghAccountName";
         private const string GRID_COLNAME_TWITTER = "dghTwitter";
         private const string GRID_COLNAME_NAMESPACE = "dghNameSpace";
@@ -23,6 +24,7 @@ namespace nagexym
         private const string GRID_COLNAME_XYM = "dghXym";
         private const string GRID_COLNAME_MESSAGE = "dghMessage";
         private const string GRID_COLNAME_CHECK = "dghCheck";
+        #endregion
 
         /// <summary>
         /// アドレスの文字数
@@ -40,6 +42,7 @@ namespace nagexym
             toolStripProgressBar1.Value= 0;
         }
 
+        #region キャンセルボタン
         /// <summary>
         /// キャンセルボタンクリック
         /// </summary>
@@ -49,7 +52,9 @@ namespace nagexym
         {
             this.Close();
         }
+        #endregion
 
+        #region 送信ボタンクリック
         /// <summary>
         /// 送信ボタンクリック
         /// </summary>
@@ -63,7 +68,95 @@ namespace nagexym
             //SendTransferTransaction();
             SendAggregateCompleteTransaction();
         }
+        #endregion
 
+        #region クリアボタンクリック
+        /// <summary>
+        /// クリアボタンクリック
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void btnClear_Click(object sender, EventArgs e)
+        {
+            dataGridView1.Rows.Clear();
+        }
+        #endregion
+
+        #region Excel読込ボタンクリック
+        /// <summary>
+        /// Excel読込ボタンクリック
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private async void btnReadExcel_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                List<ExcelRowData> rowDatas = null;
+                using (var dialog = new OpenFileDialog())
+                {
+                    if (dialog.ShowDialog() == DialogResult.OK)
+                    {
+                        var file = dialog.FileName;
+                        rowDatas = ReadExcel(file);
+                    }
+                };
+
+                if (rowDatas == null)
+                {
+                    //toolStripStatusLabel1.Text = "Excelファイルの内容が0件でした。";
+                    MessageBox.Show("Excelファイルの内容が0件でした。");
+                    return;
+                }
+
+                toolStripProgressBar1.Minimum = 0;
+                toolStripProgressBar1.Maximum = rowDatas.Count;
+                toolStripProgressBar1.Value = 0;
+
+                //// ユーザーの行追加を禁止
+                //dataGridView1.AllowUserToAddRows = false;
+
+                // グリッドにデータを設定する
+                foreach (var rowData in rowDatas)
+                {
+                    dataGridView1.Rows.Add();
+
+                    await Task.Factory.StartNew(() =>
+                    {
+                        Invoke((MethodInvoker)delegate
+                        {
+                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_ACCOUNT].Value = rowData.AccountName;
+                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_TWITTER].Value = rowData.TwitterUrl;
+                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_ADDRESS].Value = rowData.Address;
+                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_XYM].Value = rowData.Xym;
+                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_MESSAGE].Value = rowData.Message;
+                            //dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_CHECK].Value;
+                        });
+                    });
+                    toolStripProgressBar1.Value = toolStripProgressBar1.Value + 1;
+                }
+
+                //toolStripStatusLabel1.Text = "Excelファイルの読込が完了しました。";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("Excelファイルの読込に失敗しました。");
+                //toolStripStatusLabel1.Text = "Excelファイルの読込に失敗しました。";
+            }
+            finally
+            {
+                //// ユーザーの行追加を許可
+                //dataGridView1.AllowUserToAddRows = true;
+            }
+        }
+        #endregion
+
+        #region トランスファートランザクションを作成、アナウンスする
+        /// <summary>
+        /// トランスファートランザクションを作成、アナウンスする
+        /// 
+        /// MEMO:参考までにおいておく
+        /// </summary>
         private async void SendTransferTransaction()
         {
             //var facade = new SymbolFacade(Network.TestNet);
@@ -104,7 +197,15 @@ namespace nagexym
             //var responseDetailsJson = await response.Content.ReadAsStringAsync();
             //Console.WriteLine(responseDetailsJson);
         }
+        #endregion
 
+        #region グリッドのアドレスの内容でアグリゲートコンプリートトランザクションを作成、アナウンスする
+        /// <summary>
+        /// グリッドのアドレスの内容でアグリゲートコンプリートトランザクションを作成、アナウンスする
+        /// 
+        /// アグリゲートコンプリートに纏められるトランザクションは100件までなので
+        /// 100件毎に纏めてアナウンスする
+        /// </summary>
         private async void SendAggregateCompleteTransaction()
         {
             var facade = new SymbolFacade(Network.TestNet);
@@ -137,7 +238,16 @@ namespace nagexym
             // 残ったトランザクションをアナウンス
             if(txs.Count > 0) AnnounceAsync(facade, keyPair, txs);
         }
+        #endregion
 
+        #region トランザクションをアナウンスする
+        /// <summary>
+        /// トランザクションをアナウンスする
+        /// </summary>
+        /// <param name="facade"></param>
+        /// <param name="keyPair"></param>
+        /// <param name="txs"></param>
+        /// <returns></returns>
         private async Task AnnounceAsync(SymbolFacade facade, KeyPair keyPair, List<IBaseTransaction> txs)
         {
             var innerTransactions = txs.ToArray();
@@ -174,7 +284,17 @@ namespace nagexym
             var responseDetailsJson = await response.Content.ReadAsStringAsync();
             Console.WriteLine(responseDetailsJson);
         }
+        #endregion
 
+        #region トランザクションを作成
+        /// <summary>
+        /// トランザクションを作成
+        /// </summary>
+        /// <param name="keyPair"></param>
+        /// <param name="address"></param>
+        /// <param name="xym"></param>
+        /// <param name="message"></param>
+        /// <returns></returns>
         private EmbeddedTransferTransactionV1 CreateTransaction(KeyPair keyPair, string address, ulong xym, byte[] message)
         {
             return new EmbeddedTransferTransactionV1
@@ -193,69 +313,9 @@ namespace nagexym
                 Message = message
             };
         }
+        #endregion
 
-        private async void btnReadExcel_Click(object sender, EventArgs e)
-        {
-            try
-            {
-                List<ExcelRowData> rowDatas = null;
-                using (var dialog = new OpenFileDialog())
-                {
-                    if (dialog.ShowDialog() == DialogResult.OK)
-                    {
-                        var file = dialog.FileName;
-                        rowDatas = ReadExcel(file);
-                    }
-                };
-
-                if (rowDatas == null)
-                {
-                    //toolStripStatusLabel1.Text = "Excelファイルの内容が0件でした。";
-                    MessageBox.Show("Excelファイルの内容が0件でした。");
-                    return;
-                }
-
-                toolStripProgressBar1.Minimum = 0;
-                toolStripProgressBar1.Maximum = rowDatas.Count;
-                toolStripProgressBar1.Value = 0;
-
-                //// ユーザーの行追加を禁止
-                //dataGridView1.AllowUserToAddRows = false;
-
-                // グリッドにデータを設定する
-                foreach(var rowData in rowDatas)
-                {
-                    dataGridView1.Rows.Add();
-                    
-                    await Task.Factory.StartNew(() =>
-                    {
-                        Invoke((MethodInvoker)delegate
-                        {
-                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_ACCOUNT].Value = rowData.AccountName;
-                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_TWITTER].Value = rowData.TwitterUrl;
-                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_ADDRESS].Value = rowData.Address;
-                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_XYM].Value = rowData.Xym;
-                            dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_MESSAGE].Value = rowData.Message;
-                            //dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_CHECK].Value;
-                        });
-                    });
-                    toolStripProgressBar1.Value = toolStripProgressBar1.Value + 1;
-                }
-
-                //toolStripStatusLabel1.Text = "Excelファイルの読込が完了しました。";
-            }
-            catch(Exception ex)
-            {
-                MessageBox.Show("Excelファイルの読込に失敗しました。");
-                //toolStripStatusLabel1.Text = "Excelファイルの読込に失敗しました。";
-            }
-            finally
-            {
-                //// ユーザーの行追加を許可
-                //dataGridView1.AllowUserToAddRows = true;
-            }
-        }
-
+        #region Excelファイル読込
         /// <summary>
         /// Excelファイル読込
         /// </summary>
@@ -307,7 +367,9 @@ namespace nagexym
 
             return rowDatas;
         }
+        #endregion
 
+        #region グリッドに入力された値をチェックする
         /// <summary>
         /// グリッドに入力された値をチェックする
         /// </summary>
@@ -357,6 +419,9 @@ namespace nagexym
                         // アドレスでもネームスペースでもない
                         row.Cells[GRID_COLNAME_CHECK].Value = "NG";
                     }
+
+                    // ちょっとだけ待つ
+                    Task.Delay(100);
                 }
             }
             catch(Exception ex)
@@ -366,7 +431,15 @@ namespace nagexym
                 System.Diagnostics.Debug.WriteLine(ex.Message);
             }
         }
+        #endregion
 
+        #region アドレス情報を取得できるか
+        /// <summary>
+        /// アドレス情報を取得できるか
+        /// </summary>
+        /// <param name="address"></param>
+        /// <param name="client"></param>
+        /// <returns></returns>
         private async Task<string?> ExistsAddressAsync(string address, HttpClient client)
         {
             var ret = string.Empty;
@@ -395,6 +468,16 @@ namespace nagexym
                 return null;
             }
         }
+        #endregion
+
+        #region ネームスペース情報を取得できるか
+        /// <summary>
+        /// ネームスペース情報を取得できるか
+        /// TODO: 返却するのがAddressになってるのは違和感ある
+        /// </summary>
+        /// <param name="ns"></param>
+        /// <param name="client"></param>
+        /// <returns></returns>
 
         private async Task<string?> ExistsNamespaceAsync(string ns, HttpClient client)
         {
@@ -417,11 +500,14 @@ namespace nagexym
                 return null;
             }
         }
+        #endregion
 
+        #region 引数が39文字であるか
         /// <summary>
         /// 引数が39文字であるか
         /// 
         /// 39文字でなければアドレスではないはず
+        /// 39文字のネームスペースでもExistsNamespaceAsyncで判別できる
         /// </summary>
         /// <param name="address"></param>
         /// <returns></returns>
@@ -436,15 +522,7 @@ namespace nagexym
             }
             return false;
         }
+        #endregion
 
-        /// <summary>
-        /// グリッドの内容をクリアする
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void btnClear_Click(object sender, EventArgs e)
-        {
-            dataGridView1.Rows.Clear();
-        }
     }
 }
