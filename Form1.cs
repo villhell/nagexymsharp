@@ -34,12 +34,15 @@ namespace nagexym
         public Form1()
         {
             InitializeComponent();
-            txtFrom.Text= "";
+            txtFrom.Text= Properties.Settings.Default.FromAddress;
             txtPrivateKey.Text= "";
             //txtNodeUrl.Text = "http://sym-test-01.opening-line.jp:3000";
-            txtNodeUrl.Text = "";
+            txtNodeUrl.Text = Properties.Settings.Default.NodeUrl;
             //toolStripStatusLabel1.Text = "";
             toolStripProgressBar1.Value= 0;
+            comboBox1.Items.Clear();
+            comboBox1.Items.Add(Network.TestNet);
+            comboBox1.Items.Add(Network.MainNet);
         }
 
         #region キャンセルボタン
@@ -65,8 +68,15 @@ namespace nagexym
             if (string.IsNullOrEmpty(txtFrom.Text)) MessageBox.Show("空欄があります。");
             if (string.IsNullOrEmpty(txtPrivateKey.Text)) MessageBox.Show("空欄があります。");
 
+            var network = comboBox1.SelectedItem as Network;
+            if (network == null)
+            {
+                MessageBox.Show("ネットワークが選択されていません。");
+                return;
+            }
+
             //SendTransferTransaction();
-            SendAggregateCompleteTransaction();
+            SendAggregateCompleteTransaction(network);
         }
         #endregion
 
@@ -205,10 +215,11 @@ namespace nagexym
         /// 
         /// アグリゲートコンプリートに纏められるトランザクションは100件までなので
         /// 100件毎に纏めてアナウンスする
+        /// <param name="network"></param>
         /// </summary>
-        private async void SendAggregateCompleteTransaction()
+        private void SendAggregateCompleteTransaction(Network network)
         {
-            var facade = new SymbolFacade(Network.TestNet);
+            var facade = new SymbolFacade(network);
             var privateKey = new PrivateKey(txtPrivateKey.Text);
             var keyPair = new KeyPair(privateKey);
 
@@ -218,25 +229,29 @@ namespace nagexym
             int count = 0;
             foreach (DataGridViewRow row in dataGridView1.Rows)
             {
+                // チェック結果がNGの場合はスルー
+                if (string.Equals("NG", row.Cells[GRID_COLNAME_CHECK].Value)) continue;
+
                 string? address = row.Cells[GRID_COLNAME_ADDRESS].Value.ToString();
                 string? s = row.Cells[GRID_COLNAME_XYM].Value.ToString();
                 ulong xym = (ulong)double.Parse(s) * 1000000;
                 string? message = row.Cells[GRID_COLNAME_MESSAGE].Value.ToString();
-                byte[] bytes= Converter.Utf8ToPlainMessage(message);
+                byte[] bytes = Converter.Utf8ToPlainMessage(message);
 
-                txs.Add(CreateTransaction(keyPair, address, xym, bytes));
+                txs.Add(CreateTransaction(network, keyPair, address, xym, bytes));
 
                 count++;
 
-                if(count > 99)
+                if (count > 49)
                 {
-                    AnnounceAsync(facade, keyPair, txs);
+                    AnnounceAsync(network, facade, keyPair, txs);
                     txs.Clear();
+                    count = 0;
                 }
             }
 
             // 残ったトランザクションをアナウンス
-            if(txs.Count > 0) AnnounceAsync(facade, keyPair, txs);
+            if (txs.Count > 0) AnnounceAsync(network, facade, keyPair, txs);
         }
         #endregion
 
@@ -244,19 +259,20 @@ namespace nagexym
         /// <summary>
         /// トランザクションをアナウンスする
         /// </summary>
+        /// <param name="network"></param>
         /// <param name="facade"></param>
         /// <param name="keyPair"></param>
         /// <param name="txs"></param>
         /// <returns></returns>
-        private async Task AnnounceAsync(SymbolFacade facade, KeyPair keyPair, List<IBaseTransaction> txs)
+        private async Task AnnounceAsync(Network network, SymbolFacade facade, KeyPair keyPair, List<IBaseTransaction> txs)
         {
             var innerTransactions = txs.ToArray();
 
             var merkleHash = SymbolFacade.HashEmbeddedTransactions(innerTransactions);
-
+            
             var aggTx = new AggregateCompleteTransactionV2
             {
-                Network = NetworkType.TESTNET,
+                Network = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET,
                 Transactions = innerTransactions,
                 SignerPublicKey = keyPair.PublicKey,
                 Fee = new Amount(1000000),
@@ -290,23 +306,26 @@ namespace nagexym
         /// <summary>
         /// トランザクションを作成
         /// </summary>
+        /// <param name="network"></param>
         /// <param name="keyPair"></param>
         /// <param name="address"></param>
         /// <param name="xym"></param>
         /// <param name="message"></param>
         /// <returns></returns>
-        private EmbeddedTransferTransactionV1 CreateTransaction(KeyPair keyPair, string address, ulong xym, byte[] message)
+        private EmbeddedTransferTransactionV1 CreateTransaction(Network network, KeyPair keyPair, string address, ulong xym, byte[] message)
         {
+            var networkType = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET;
+            ulong mosaicId = (ulong)(string.Equals(network.Name, "mainnet") ? 0x6BED913FA20223F8 : 0x72C0212E67A08BCE);
             return new EmbeddedTransferTransactionV1
             {
-                Network = NetworkType.TESTNET,
+                Network = networkType,
                 SignerPublicKey = keyPair.PublicKey,
                 RecipientAddress = new UnresolvedAddress(Converter.StringToAddress(address)),
                 Mosaics = new UnresolvedMosaic[]
                 {
                     new()
                     {
-                        MosaicId = new UnresolvedMosaicId(0x72C0212E67A08BCE),
+                        MosaicId = new UnresolvedMosaicId(mosaicId),
                         Amount = new Amount(xym)
                     }
                 },
@@ -524,5 +543,19 @@ namespace nagexym
         }
         #endregion
 
+        /// <summary>
+        /// フォームを閉じる
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void Form1_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if(!string.IsNullOrEmpty(txtNodeUrl.Text))
+                Properties.Settings.Default.NodeUrl = txtNodeUrl.Text;
+            if (!string.IsNullOrEmpty(txtFrom.Text))
+                Properties.Settings.Default.FromAddress = txtFrom.Text;
+
+            Properties.Settings.Default.Save();
+        }
     }
 }
