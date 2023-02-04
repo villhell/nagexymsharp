@@ -52,6 +52,7 @@
             this.txtNodeUrl = new System.Windows.Forms.TextBox();
             this.comboBox1 = new System.Windows.Forms.ComboBox();
             this.label5 = new System.Windows.Forms.Label();
+            this.btnStop = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
             this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
@@ -204,7 +205,7 @@
             this.btnReadExcel.TabIndex = 4;
             this.btnReadExcel.Text = "Excel読込";
             this.btnReadExcel.UseVisualStyleBackColor = true;
-            this.btnReadExcel.Click += new System.EventHandler(this.btnReadExcel_Click);
+            this.btnReadExcel.Click += new System.EventHandler(this.btnReadExcel_ClickAsync);
             // 
             // btnCheck
             // 
@@ -281,6 +282,13 @@
             this.label5.TabIndex = 2;
             this.label5.Text = "ネットワーク:";
             // 
+            // btnStop
+            // 
+            this.btnStop.Location = new System.Drawing.Point(0, 0);
+            this.btnStop.Name = "btnStop";
+            this.btnStop.Size = new System.Drawing.Size(75, 23);
+            this.btnStop.TabIndex = 8;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
@@ -301,6 +309,7 @@
             this.Controls.Add(this.txtPrivateKey);
             this.Controls.Add(this.txtFrom);
             this.Controls.Add(this.btnCancel);
+            this.Controls.Add(this.btnStop);
             this.Controls.Add(this.btnSend);
             this.Name = "Form1";
             this.Text = "nagexymsharp";
@@ -339,5 +348,6 @@
         private TextBox txtNodeUrl;
         private ComboBox comboBox1;
         private Label label5;
+        private Button btnStop;
     }
 }

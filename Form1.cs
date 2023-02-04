@@ -31,6 +31,8 @@ namespace nagexym
         /// </summary>
         private const int ADDRESS_LENGTH = 39;
 
+        private CancellationTokenSource _cancellationTokenSource;
+
         public Form1()
         {
             InitializeComponent();
@@ -53,7 +55,7 @@ namespace nagexym
         /// <param name="e"></param>
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Close();
+            _cancellationTokenSource.Cancel();
         }
         #endregion
 
@@ -89,6 +91,7 @@ namespace nagexym
         private void btnClear_Click(object sender, EventArgs e)
         {
             dataGridView1.Rows.Clear();
+            toolStripProgressBar1.Value = 0;
         }
         #endregion
 
@@ -98,7 +101,7 @@ namespace nagexym
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void btnReadExcel_Click(object sender, EventArgs e)
+        private async void btnReadExcel_ClickAsync(object sender, EventArgs e)
         {
             try
             {
@@ -126,27 +129,44 @@ namespace nagexym
                 //// ユーザーの行追加を禁止
                 //dataGridView1.AllowUserToAddRows = false;
 
-                // グリッドにデータを設定する
-                foreach (var rowData in rowDatas)
-                {
-                    dataGridView1.Rows.Add();
+                _cancellationTokenSource = new CancellationTokenSource();
+                var cancellationToken = _cancellationTokenSource.Token;
 
-                    await Task.Factory.StartNew(() =>
+                await Task.Run(() =>
+                {
+                    // グリッドにデータを設定する
+                    foreach (var rowData in rowDatas)
                     {
                         Invoke((MethodInvoker)delegate
                         {
+                            dataGridView1.Rows.Add();
+
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_ACCOUNT].Value = rowData.AccountName;
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_TWITTER].Value = rowData.TwitterUrl;
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_ADDRESS].Value = rowData.Address;
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_XYM].Value = rowData.Xym;
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_MESSAGE].Value = rowData.Message;
                             //dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_CHECK].Value;
+
+                            // キャンセルする
+                            if (cancellationToken.IsCancellationRequested)
+                            {
+                                //cancellationToken.ThrowIfCancellationRequested();
+                                throw new OperationCanceledException();
+                            }
+                            cancellationToken.ThrowIfCancellationRequested();
+
+                            toolStripProgressBar1.Value = toolStripProgressBar1.Value + 1;
                         });
-                    });
-                    toolStripProgressBar1.Value = toolStripProgressBar1.Value + 1;
-                }
+                    }
+
+                }, cancellationToken);
 
                 //toolStripStatusLabel1.Text = "Excelファイルの読込が完了しました。";
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Excelファイルの読込を停止しました。");
             }
             catch (Exception ex)
             {
@@ -396,54 +416,89 @@ namespace nagexym
         /// <param name="e"></param>
         private async void btnCheck_ClickAsync(object sender, EventArgs e)
         {
+            toolStripProgressBar1.Minimum = 0;
+            toolStripProgressBar1.Maximum = dataGridView1.Rows.Count;
+            toolStripProgressBar1.Value = 0;
+
             try
             {
-                //var accountRequest = new RestRequest("/accounts/");
-                //var namespaceRequest = new RestRequest("/namespaces/");
+                _cancellationTokenSource = new CancellationTokenSource();
+                var cancellationToken = _cancellationTokenSource.Token;
+
                 var content = string.Empty;
                 JObject json = null;
 
                 HttpClient client = new HttpClient();
                 client.BaseAddress = new Uri(txtNodeUrl.Text);
-                
-                foreach (DataGridViewRow row in dataGridView1.Rows)
+
+                await Task.Run(async () =>
                 {
-                    var addressOrAlias = row.Cells[GRID_COLNAME_ADDRESS].Value != null ? row.Cells[GRID_COLNAME_ADDRESS].Value.ToString() : "";
-
-                    // アドレスの文字列かどうか
-                    var address = await ExistsAddressAsync(addressOrAlias, client);
-                    if (!string.IsNullOrEmpty(address))
+                    foreach (DataGridViewRow row in dataGridView1.Rows)
                     {
-                        // アドレスが見つかった場合は次へ
-                        row.Cells[GRID_COLNAME_CHECK].Value = "OK";
-                        continue;
-                    }
-                    //else
-                    //{
-                    //    // アドレス情報なし
-                    //    row.Cells[GRID_COLNAME_CHECK].Value = "NG";
-                    //}
+                        var addressOrAlias = row.Cells[GRID_COLNAME_ADDRESS].Value != null ? row.Cells[GRID_COLNAME_ADDRESS].Value.ToString() : "";
+
+                        // ちょっとだけ待つ
+                        Task.Delay(100);
+
+                        Invoke((MethodInvoker)delegate
+                        {
+                            toolStripProgressBar1.Value = toolStripProgressBar1.Value + 1;
+                        });
+
+                        // アドレスの文字列かどうか
+                        var address = await ExistsAddressAsync(addressOrAlias, client);
+                        if (!string.IsNullOrEmpty(address))
+                        {
+                            // アドレスが見つかった場合は次へ
+                            Invoke((MethodInvoker)delegate
+                            {
+                                row.Cells[GRID_COLNAME_CHECK].Value = "OK";
+                            });
+                            continue;
+                        }
+                        //else
+                        //{
+                        //    // アドレス情報なし
+                        //    row.Cells[GRID_COLNAME_CHECK].Value = "NG";
+                        //}
                     
-                    // ネームスペースからアドレスが取得できるか
-                    address = await ExistsNamespaceAsync(addressOrAlias, client);
-                    if (!string.IsNullOrEmpty(address))
-                    {
-                        // ネームスペース、アドレスをグリッドに設定
-                        row.Cells[GRID_COLNAME_NAMESPACE].Value = addressOrAlias;
-                        row.Cells[GRID_COLNAME_ADDRESS].Value = address;
-                        row.Cells[GRID_COLNAME_CHECK].Value = "OK";
-                    }
-                    else
-                    {
-                        // アドレスでもネームスペースでもない
-                        row.Cells[GRID_COLNAME_CHECK].Value = "NG";
+                        // ネームスペースからアドレスが取得できるか
+                        address = await ExistsNamespaceAsync(addressOrAlias, client);
+                        if (!string.IsNullOrEmpty(address))
+                        {
+                            Invoke((MethodInvoker)delegate
+                            {
+                                // ネームスペース、アドレスをグリッドに設定
+                                row.Cells[GRID_COLNAME_NAMESPACE].Value = addressOrAlias;
+                                row.Cells[GRID_COLNAME_ADDRESS].Value = address;
+                                row.Cells[GRID_COLNAME_CHECK].Value = "OK";
+                            });
+                        }
+                        else
+                        {
+                            Invoke((MethodInvoker)delegate
+                            {
+                                // アドレスでもネームスペースでもない
+                                row.Cells[GRID_COLNAME_CHECK].Value = "NG";
+                            });
+                        }
+
+                        // キャンセルする
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            //cancellationToken.ThrowIfCancellationRequested();
+                            throw new OperationCanceledException();
+                        }
+                        cancellationToken.ThrowIfCancellationRequested();
                     }
 
-                    // ちょっとだけ待つ
-                    Task.Delay(100);
-                }
+                }, cancellationToken);
             }
-            catch(Exception ex)
+            catch (OperationCanceledException ex)
+            {
+                MessageBox.Show("チェック処理を中断します。");
+            }
+            catch (Exception ex)
             {
                 MessageBox.Show("エラーが発生したので処理を中断します。");
                 //toolStripStatusLabel1.Text = "Excelファイルの読込に失敗しました。";
