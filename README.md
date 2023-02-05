@@ -11,10 +11,10 @@ Macでは動かせないかと思いますm(__)m
 いづれはユーザーがある程度自由な形式のファイルを取り込めるように改良していく予定です。
 
 ## 使い方
-1.Excelファイルを読み込む
-2.取り込んだデータをチェック
-3.チェックOKだったアドレスに対してXymを送信
-4.完了＼(^o^)／
+* 1.Excelファイルを読み込む
+* 2.取り込んだデータをチェック
+* 3.チェックOKだったアドレスに対してXymを送信
+* 4.完了＼(^o^)／
 
 ## SYMBOLタウンリスト
 https://docs.google.com/spreadsheets/d/1X2AsmEOXpMlwZ9r6yA-2sqEfTBpFnst_nF1nXhZjLCk/edit#gid=0
