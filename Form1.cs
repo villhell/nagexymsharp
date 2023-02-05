@@ -11,6 +11,8 @@ using RestSharp;
 using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using static nagexym.ToolStateManager;
+using static System.Windows.Forms.AxHost;
 
 namespace nagexym
 {
@@ -26,23 +28,45 @@ namespace nagexym
         private const string GRID_COLNAME_CHECK = "dghCheck";
         #endregion
 
+
         /// <summary>
         /// アドレスの文字数
         /// </summary>
         private const int ADDRESS_LENGTH = 39;
 
+        /// <summary>
+        /// キャンセルトークンソース
+        /// </summary>
+        private CancellationTokenSource _cancellationTokenSource;
+
+        /// <summary>
+        /// ネットワーク
+        /// </summary>
+        private Network? _network;
+
+        /// <summary>
+        /// ツールの状態
+        /// </summary>
+        private ToolStateManager _toolStateManager;
+
         public Form1()
         {
             InitializeComponent();
+
+            // 前回値を読込む
             txtFrom.Text= Properties.Settings.Default.FromAddress;
-            txtPrivateKey.Text= "";
-            //txtNodeUrl.Text = "http://sym-test-01.opening-line.jp:3000";
             txtNodeUrl.Text = Properties.Settings.Default.NodeUrl;
-            //toolStripStatusLabel1.Text = "";
-            toolStripProgressBar1.Value= 0;
-            comboBox1.Items.Clear();
-            comboBox1.Items.Add(Network.TestNet);
-            comboBox1.Items.Add(Network.MainNet);
+            
+            // 初期化
+            txtPrivateKey.Text= "";
+            lblStatus.Text = "";
+            progressBar1.Value= 0;
+            _toolStateManager = new ToolStateManager();
+
+            // 状態設定
+            _toolStateManager.SetState(ToolState.Init);
+            // コントロール制御
+            ChangeControl();
         }
 
         #region キャンセルボタン
@@ -53,7 +77,20 @@ namespace nagexym
         /// <param name="e"></param>
         private void btnCancel_Click(object sender, EventArgs e)
         {
-            this.Close();
+            _cancellationTokenSource.Cancel();
+
+            // キャンセル時のコントロール制御
+            ChangeControl(true);
+
+            var state = _toolStateManager.GetState();
+            if (state == ToolState.StartReadExcel)
+            {
+                _toolStateManager.SetState(ToolState.Init);
+            }
+            else if(state == ToolState.StartCheck || state == ToolState.Checking)
+            {
+                _toolStateManager.SetState(ToolState.EndReadExcel);
+            }
         }
         #endregion
 
@@ -63,20 +100,102 @@ namespace nagexym
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void btnSend_Click(object sender, EventArgs e)
+        private async void btnSend_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrEmpty(txtFrom.Text)) MessageBox.Show("空欄があります。");
-            if (string.IsNullOrEmpty(txtPrivateKey.Text)) MessageBox.Show("空欄があります。");
-
-            var network = comboBox1.SelectedItem as Network;
-            if (network == null)
+            if (string.IsNullOrEmpty(txtFrom.Text))
             {
-                MessageBox.Show("ネットワークが選択されていません。");
+                MessageBox.Show("あなたのアドレスが未入力です。");
+                return;
+            }
+            if (string.IsNullOrEmpty(txtPrivateKey.Text))
+            {
+                MessageBox.Show("あなたの秘密鍵が未入力です。");
+                return;
+            }
+
+            if (_network == null)
+            {
+                MessageBox.Show("ネットワークを識別できません。\nあなたのアドレスの入力を再確認して下さい。");
+                return;
+            }
+
+            if (_toolStateManager.GetState() != ToolState.EndCheck)
+            {
+                MessageBox.Show("相手のアドレスのチェックが終わっていません。\nチェックボタンを押して下さい。");
+                return;
+            }
+            if (!await EqualsNetwork())
+            {
+                MessageBox.Show("ノードとあなたのアドレスのネットワークが異なっています。\n入力値を見直して下さい。");
                 return;
             }
 
             //SendTransferTransaction();
-            SendAggregateCompleteTransaction(network);
+
+            // 手数料情報を取得
+            var fee = await GetFee();
+
+            SendAggregateCompleteTransaction(_network, fee);
+        }
+
+        #endregion
+
+        #region ノードのネットワークとアドレスのネットワークが一致しているか
+        /// <summary>
+        /// ノードのネットワークとアドレスのネットワークが一致しているか
+        /// </summary>
+        /// <returns></returns>
+        private async Task<bool> EqualsNetwork()
+        {
+            try
+            {
+                HttpClient client = new HttpClient();
+                client.BaseAddress = new Uri(txtNodeUrl.Text);
+                var feeResult = await client.GetAsync("/network");
+                var content = await feeResult.Content.ReadAsStringAsync();
+                var json = JObject.Parse(content);
+
+                var nodeNetwork = json["name"].ToString();
+
+                if(string.Equals(nodeNetwork, lblNetwork.Text))
+                { 
+                    return true;
+                }
+                
+            }
+            catch(Exception ex)
+            {
+                return false;
+            }
+            return false;
+        }
+        #endregion
+
+        #region 手数料を取得
+        /// <summary>
+        /// 手数料を取得
+        /// </summary>
+        /// <returns></returns>
+        private async Task<double> GetFee()
+        {
+            HttpClient client = new HttpClient();
+            client.BaseAddress = new Uri(txtNodeUrl.Text);
+            var feeResult = await client.GetAsync("/network/fees/transaction");
+            var content = await feeResult.Content.ReadAsStringAsync();
+            var json = JObject.Parse(content);
+
+            double fee = 0.0;
+            if (json["minFeeMultiplier"] == null || json["averageFeeMultiplier"] == null)
+            {
+                fee = 100;
+            }
+            else
+            {
+                int min = json["minFeeMultiplier"].Value<int>();
+                int avg = json["averageFeeMultiplier"].Value<int>();
+                fee = (min + avg) * 0.65;
+            }
+            return fee;
         }
         #endregion
 
@@ -86,9 +205,12 @@ namespace nagexym
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private void btnClear_Click(object sender, EventArgs e)
+        private async void btnClear_Click(object sender, EventArgs e)
         {
             dataGridView1.Rows.Clear();
+            progressBar1.Value = 0;
+            lblStatus.Text = "クリアしました。";
+            _toolStateManager.SetState(ToolState.Init);
         }
         #endregion
 
@@ -98,7 +220,7 @@ namespace nagexym
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
-        private async void btnReadExcel_Click(object sender, EventArgs e)
+        private async void btnReadExcel_ClickAsync(object sender, EventArgs e)
         {
             try
             {
@@ -114,49 +236,68 @@ namespace nagexym
 
                 if (rowDatas == null)
                 {
-                    //toolStripStatusLabel1.Text = "Excelファイルの内容が0件でした。";
+                    lblStatus.Text = "Excelファイルの内容が0件でした。";
                     MessageBox.Show("Excelファイルの内容が0件でした。");
                     return;
                 }
 
-                toolStripProgressBar1.Minimum = 0;
-                toolStripProgressBar1.Maximum = rowDatas.Count;
-                toolStripProgressBar1.Value = 0;
+                // プログレスバーの設定
+                progressBar1.Minimum = 0;
+                progressBar1.Maximum = rowDatas.Count;
+                progressBar1.Value = 0;
 
-                //// ユーザーの行追加を禁止
-                //dataGridView1.AllowUserToAddRows = false;
+                // キャンセルトークン生成
+                _cancellationTokenSource = new CancellationTokenSource();
+                var cancellationToken = _cancellationTokenSource.Token;
+
+                // グリッドの初期化
+                dataGridView1.Rows.Clear();
 
                 // グリッドにデータを設定する
                 foreach (var rowData in rowDatas)
                 {
-                    dataGridView1.Rows.Add();
-
-                    await Task.Factory.StartNew(() =>
+                    await Task.Run(() =>
                     {
-                        Invoke((MethodInvoker)delegate
+                        dataGridView1.Invoke((MethodInvoker)delegate
                         {
+                            dataGridView1.Rows.Add();
+
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_ACCOUNT].Value = rowData.AccountName;
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_TWITTER].Value = rowData.TwitterUrl;
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_ADDRESS].Value = rowData.Address;
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_XYM].Value = rowData.Xym;
                             dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_MESSAGE].Value = rowData.Message;
-                            //dataGridView1.Rows[dataGridView1.Rows.Count - 1].Cells[GRID_COLNAME_CHECK].Value;
                         });
-                    });
-                    toolStripProgressBar1.Value = toolStripProgressBar1.Value + 1;
+                            
+                        // キャンセルする
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            //cancellationToken.ThrowIfCancellationRequested();
+                            throw new OperationCanceledException();
+                        }
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        Invoke((MethodInvoker)delegate
+                        {
+                            progressBar1.Value = progressBar1.Value + 1;
+                        });  
+                        
+                    }, cancellationToken);
                 }
 
-                //toolStripStatusLabel1.Text = "Excelファイルの読込が完了しました。";
+                // 状態設定
+                _toolStateManager.SetState(ToolState.EndReadExcel);
+                // コントロール制御
+                ChangeControl();
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("Excelファイルの読込を停止しました。");
             }
             catch (Exception ex)
             {
                 MessageBox.Show("Excelファイルの読込に失敗しました。");
-                //toolStripStatusLabel1.Text = "Excelファイルの読込に失敗しました。";
-            }
-            finally
-            {
-                //// ユーザーの行追加を許可
-                //dataGridView1.AllowUserToAddRows = true;
+                lblStatus.Text = "Excelファイルの読込に失敗しました。";
             }
         }
         #endregion
@@ -217,8 +358,14 @@ namespace nagexym
         /// 100件毎に纏めてアナウンスする
         /// <param name="network"></param>
         /// </summary>
-        private void SendAggregateCompleteTransaction(Network network)
+        private void SendAggregateCompleteTransaction(Network network, double feeMultiplier)
         {
+
+            // 状態設定
+            _toolStateManager.SetState(ToolState.StartSend);
+            // コントロール制御
+            ChangeControl();
+
             var facade = new SymbolFacade(network);
             var privateKey = new PrivateKey(txtPrivateKey.Text);
             var keyPair = new KeyPair(privateKey);
@@ -244,14 +391,19 @@ namespace nagexym
 
                 if (count > 49)
                 {
-                    AnnounceAsync(network, facade, keyPair, txs);
+                    AnnounceAsync(network, facade, keyPair, txs, feeMultiplier);
                     txs.Clear();
                     count = 0;
                 }
             }
 
             // 残ったトランザクションをアナウンス
-            if (txs.Count > 0) AnnounceAsync(network, facade, keyPair, txs);
+            if (txs.Count > 0) AnnounceAsync(network, facade, keyPair, txs, feeMultiplier);
+
+            // 状態設定
+            _toolStateManager.SetState(ToolState.EndSend);
+            // コントロール制御
+            ChangeControl();
         }
         #endregion
 
@@ -264,7 +416,7 @@ namespace nagexym
         /// <param name="keyPair"></param>
         /// <param name="txs"></param>
         /// <returns></returns>
-        private async Task AnnounceAsync(Network network, SymbolFacade facade, KeyPair keyPair, List<IBaseTransaction> txs)
+        private async Task AnnounceAsync(Network network, SymbolFacade facade, KeyPair keyPair, List<IBaseTransaction> txs, double feeMultiplier)
         {
             var innerTransactions = txs.ToArray();
 
@@ -275,11 +427,12 @@ namespace nagexym
                 Network = string.Equals(network.Name, "mainnet") ? NetworkType.MAINNET : NetworkType.TESTNET,
                 Transactions = innerTransactions,
                 SignerPublicKey = keyPair.PublicKey,
-                Fee = new Amount(1000000),
+                //Fee = new Amount(1000000),
                 TransactionsHash = merkleHash,
                 Deadline = new Timestamp(facade.Network.FromDatetime<NetworkTimestamp>(DateTime.UtcNow).AddHours(2).Timestamp),
             };
-
+            var fee = aggTx.Size * feeMultiplier;
+            aggTx.Fee = new Amount((ulong)fee);
             var signature = facade.SignTransaction(keyPair, aggTx);
             TransactionsFactory.AttachSignature(aggTx, signature);
 
@@ -352,7 +505,10 @@ namespace nagexym
 
             try
             {
-                //toolStripStatusLabel1.Text = "Excelファイルの読込を開始しました。";
+                // 状態設定
+                _toolStateManager.SetState(ToolState.StartReadExcel);
+                // コントロール制御
+                ChangeControl();
 
                 // 行数、先頭行はヘッダーなので2行目から解析する
                 int row = 2;
@@ -379,8 +535,8 @@ namespace nagexym
             }
             catch(Exception ex)
             {
-                MessageBox.Show("エラーが発生したので処理を中断します。");
-                //toolStripStatusLabel1.Text = "Excelファイルの読込に失敗しました。";
+                MessageBox.Show("エラーが発生したので処理を中断します。", this.Name);
+                lblStatus.Text = "Excelファイルの読込に失敗しました。";
                 System.Diagnostics.Debug.WriteLine(ex.Message);
             }
 
@@ -396,57 +552,110 @@ namespace nagexym
         /// <param name="e"></param>
         private async void btnCheck_ClickAsync(object sender, EventArgs e)
         {
+            progressBar1.Minimum = 0;
+            progressBar1.Maximum = dataGridView1.Rows.Count;
+            progressBar1.Value = 0;
+
+            if (_toolStateManager.GetState() != ToolState.EndReadExcel)
+            {
+                MessageBox.Show("Excelファイルを読み込んでいません。\nExcel読込ボタンを押してファイルを読み込んで下さい。");
+                return;
+            }
+
             try
             {
-                //var accountRequest = new RestRequest("/accounts/");
-                //var namespaceRequest = new RestRequest("/namespaces/");
+                // 状態設定
+                _toolStateManager.SetState(ToolState.StartCheck);
+                // コントロール制御
+                ChangeControl();
+
+                _cancellationTokenSource = new CancellationTokenSource();
+                var cancellationToken = _cancellationTokenSource.Token;
+
                 var content = string.Empty;
                 JObject json = null;
 
                 HttpClient client = new HttpClient();
                 client.BaseAddress = new Uri(txtNodeUrl.Text);
-                
+
                 foreach (DataGridViewRow row in dataGridView1.Rows)
                 {
                     var addressOrAlias = row.Cells[GRID_COLNAME_ADDRESS].Value != null ? row.Cells[GRID_COLNAME_ADDRESS].Value.ToString() : "";
 
-                    // アドレスの文字列かどうか
-                    var address = await ExistsAddressAsync(addressOrAlias, client);
-                    if (!string.IsNullOrEmpty(address))
-                    {
-                        // アドレスが見つかった場合は次へ
-                        row.Cells[GRID_COLNAME_CHECK].Value = "OK";
-                        continue;
-                    }
-                    //else
-                    //{
-                    //    // アドレス情報なし
-                    //    row.Cells[GRID_COLNAME_CHECK].Value = "NG";
-                    //}
-                    
-                    // ネームスペースからアドレスが取得できるか
-                    address = await ExistsNamespaceAsync(addressOrAlias, client);
-                    if (!string.IsNullOrEmpty(address))
-                    {
-                        // ネームスペース、アドレスをグリッドに設定
-                        row.Cells[GRID_COLNAME_NAMESPACE].Value = addressOrAlias;
-                        row.Cells[GRID_COLNAME_ADDRESS].Value = address;
-                        row.Cells[GRID_COLNAME_CHECK].Value = "OK";
-                    }
-                    else
-                    {
-                        // アドレスでもネームスペースでもない
-                        row.Cells[GRID_COLNAME_CHECK].Value = "NG";
-                    }
-
                     // ちょっとだけ待つ
                     Task.Delay(100);
+
+                    await Task.Run(async () =>
+                    {
+                        this.Invoke((MethodInvoker)delegate
+                        {
+                            progressBar1.Value = progressBar1.Value + 1;
+                            
+                            // 状態設定
+                            _toolStateManager.SetState(ToolState.Checking);
+                            // コントロール制御
+                            ChangeControl();
+                        });
+
+                        // アドレスの文字列かどうか
+                        var address = await ExistsAddressAsync(addressOrAlias, client);
+                        if (!string.IsNullOrEmpty(address))
+                        {
+                            // アドレスが見つかった場合は次へ
+                            dataGridView1.Invoke((MethodInvoker)delegate
+                            {
+                                row.Cells[GRID_COLNAME_CHECK].Value = "OK";
+                            });
+                            return;
+                        }
+                    
+                        // ネームスペースからアドレスが取得できるか
+                        address = await ExistsNamespaceAsync(addressOrAlias, client);
+                        if (!string.IsNullOrEmpty(address))
+                        {
+                            dataGridView1.Invoke((MethodInvoker)delegate
+                            {
+                                // ネームスペース、アドレスをグリッドに設定
+                                row.Cells[GRID_COLNAME_NAMESPACE].Value = addressOrAlias;
+                                row.Cells[GRID_COLNAME_ADDRESS].Value = address;
+                                row.Cells[GRID_COLNAME_CHECK].Value = "OK";
+                            });
+                        }
+                        else
+                        {
+                            dataGridView1.Invoke((MethodInvoker)delegate
+                            {
+                                // アドレスでもネームスペースでもない
+                                row.Cells[GRID_COLNAME_CHECK].Value = "NG";
+                            });
+                        }
+
+                        // キャンセルする
+                        if (cancellationToken.IsCancellationRequested)
+                        {
+                            //cancellationToken.ThrowIfCancellationRequested();
+                            throw new OperationCanceledException();
+                        }
+                        cancellationToken.ThrowIfCancellationRequested();
+                        
+                    }, cancellationToken);
                 }
+
+                // 状態設定
+                _toolStateManager.SetState(ToolState.EndCheck);
+                // コントロール制御
+                ChangeControl();
+                
             }
-            catch(Exception ex)
+            catch (OperationCanceledException ex)
+            {
+                lblStatus.Text = "チェック処理を中断しました。";
+                MessageBox.Show("チェック処理を中断します。");
+            }
+            catch (Exception ex)
             {
                 MessageBox.Show("エラーが発生したので処理を中断します。");
-                //toolStripStatusLabel1.Text = "Excelファイルの読込に失敗しました。";
+                lblStatus.Text = "エラーが発生したので処理を中断しました。";
                 System.Diagnostics.Debug.WriteLine(ex.Message);
             }
         }
@@ -543,19 +752,130 @@ namespace nagexym
         }
         #endregion
 
+        #region Form1_FormClosing
         /// <summary>
-        /// フォームを閉じる
+        /// Form1_FormClosing
         /// </summary>
         /// <param name="sender"></param>
         /// <param name="e"></param>
         private void Form1_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if(!string.IsNullOrEmpty(txtNodeUrl.Text))
+            if (!string.IsNullOrEmpty(txtNodeUrl.Text))
                 Properties.Settings.Default.NodeUrl = txtNodeUrl.Text;
             if (!string.IsNullOrEmpty(txtFrom.Text))
                 Properties.Settings.Default.FromAddress = txtFrom.Text;
 
             Properties.Settings.Default.Save();
+        }
+        #endregion
+
+        #region txtFrom_TextChanged
+        /// <summary>
+        /// txtFrom_TextChanged
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void txtFrom_TextChanged(object sender, EventArgs e)
+        {
+            SetNetwork();
+        }
+        #endregion
+
+        #region 入力したアドレスをもとにネットワークを判別する
+        /// <summary>
+        /// 入力したアドレスをもとにネットワークを判別する
+        /// </summary>
+        private void SetNetwork()
+        {
+            var text = txtFrom.Text;
+            if (IsAddressLength(txtFrom.Text))
+            {
+                var identifier = text.Substring(0, 1);
+                if (string.Equals(identifier, "T"))
+                {
+                    lblNetwork.Text = "testnet";
+                    _network = Network.TestNet;
+                }
+                else if (string.Equals(identifier, "N"))
+                {
+                    lblNetwork.Text = "mainnet";
+                    _network = Network.MainNet;
+                }
+                else
+                {
+                    lblNetwork.Text = "unknown network";
+                    _network = null;
+                }
+            }
+            else
+            {
+                lblNetwork.Text = "unknown network";
+                _network = null;
+            }
+        }
+        #endregion
+
+        /// <summary>
+        /// ツールの状態に合わせてコントロールを変化させる
+        /// </summary>
+        private void ChangeControl(bool cancelFlg = false)
+        {
+            var state = _toolStateManager.GetState();
+
+            if(cancelFlg)
+            {
+                switch (state)
+                {
+                    case ToolState.StartReadExcel:
+                        lblStatus.Text = "Excelファイルの読込を中止しました。";
+                        btnCancel.Enabled = false;
+                        break;
+                    
+                    case ToolState.StartCheck:
+                    case ToolState.Checking:
+                        lblStatus.Text = "チェックを中止しました。";
+                        btnCancel.Enabled = false;
+                        break;
+                }
+
+                return;
+            }
+
+            switch (state)
+            {
+                case ToolState.Init:
+                    lblStatus.Text = "nagexymsharpを起動しました。";
+                    btnCancel.Enabled = false;
+                    break;
+                case ToolState.StartReadExcel:
+                    lblStatus.Text = "Excelファイルの読込を開始しました。";
+                    btnCancel.Enabled = true;
+                    break;
+                case ToolState.EndReadExcel:
+                    lblStatus.Text = "Excelファイルの読込を終了しました。";
+                    btnCancel.Enabled = false;
+                    break;
+                case ToolState.StartCheck:
+                    lblStatus.Text = "チェックを開始しました。";
+                    btnCancel.Enabled = true;
+                    break;
+                case ToolState.Checking:
+                    lblStatus.Text = string.Format("チェック中です。 {0}/{1}", progressBar1.Value, progressBar1.Maximum);
+                    break;
+                case ToolState.EndCheck:
+                    lblStatus.Text = string.Format("チェック完了です。 {0}/{1}", progressBar1.Value, progressBar1.Maximum);
+                    btnCancel.Enabled = true;
+                    break;
+                case ToolState.StartSend:
+                    lblStatus.Text = "送信しています。";
+                    break;
+                case ToolState.EndSend:
+                    lblStatus.Text = "送信しました。";
+                    break;
+                case ToolState.Complete:
+                    lblStatus.Text = "終了しました。";
+                    break;
+            }
         }
     }
 }

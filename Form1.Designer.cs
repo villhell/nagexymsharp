@@ -46,20 +46,18 @@
             this.btnReadExcel = new System.Windows.Forms.Button();
             this.btnCheck = new System.Windows.Forms.Button();
             this.btnClear = new System.Windows.Forms.Button();
-            this.statusStrip1 = new System.Windows.Forms.StatusStrip();
-            this.toolStripProgressBar1 = new System.Windows.Forms.ToolStripProgressBar();
             this.label4 = new System.Windows.Forms.Label();
             this.txtNodeUrl = new System.Windows.Forms.TextBox();
-            this.comboBox1 = new System.Windows.Forms.ComboBox();
+            this.lblNetwork = new System.Windows.Forms.Label();
             this.label5 = new System.Windows.Forms.Label();
+            this.progressBar1 = new System.Windows.Forms.ProgressBar();
+            this.lblStatus = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).BeginInit();
-            this.statusStrip1.SuspendLayout();
             this.SuspendLayout();
             // 
             // btnSend
             // 
-            this.btnSend.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnSend.Location = new System.Drawing.Point(1493, 534);
+            this.btnSend.Location = new System.Drawing.Point(1493, 566);
             this.btnSend.Name = "btnSend";
             this.btnSend.Size = new System.Drawing.Size(94, 29);
             this.btnSend.TabIndex = 0;
@@ -69,8 +67,7 @@
             // 
             // btnCancel
             // 
-            this.btnCancel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCancel.Location = new System.Drawing.Point(1493, 569);
+            this.btnCancel.Location = new System.Drawing.Point(1493, 601);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(94, 29);
             this.btnCancel.TabIndex = 0;
@@ -84,6 +81,7 @@
             this.txtFrom.Name = "txtFrom";
             this.txtFrom.Size = new System.Drawing.Size(470, 27);
             this.txtFrom.TabIndex = 1;
+            this.txtFrom.TextChanged += new System.EventHandler(this.txtFrom_TextChanged);
             // 
             // label1
             // 
@@ -97,7 +95,7 @@
             // label2
             // 
             this.label2.AutoSize = true;
-            this.label2.Location = new System.Drawing.Point(34, 174);
+            this.label2.Location = new System.Drawing.Point(34, 197);
             this.label2.Name = "label2";
             this.label2.Size = new System.Drawing.Size(99, 20);
             this.label2.TabIndex = 2;
@@ -124,9 +122,6 @@
             // 
             this.dataGridView1.AllowUserToAddRows = false;
             this.dataGridView1.AllowUserToResizeRows = false;
-            this.dataGridView1.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
             this.dataGridView1.AutoSizeColumnsMode = System.Windows.Forms.DataGridViewAutoSizeColumnsMode.AllCells;
             this.dataGridView1.ColumnHeadersHeightSizeMode = System.Windows.Forms.DataGridViewColumnHeadersHeightSizeMode.AutoSize;
             this.dataGridView1.Columns.AddRange(new System.Windows.Forms.DataGridViewColumn[] {
@@ -137,7 +132,7 @@
             this.dghAddress,
             this.dghXym,
             this.dghMessage});
-            this.dataGridView1.Location = new System.Drawing.Point(34, 197);
+            this.dataGridView1.Location = new System.Drawing.Point(34, 232);
             this.dataGridView1.Name = "dataGridView1";
             this.dataGridView1.RowHeadersVisible = false;
             this.dataGridView1.RowHeadersWidth = 51;
@@ -198,18 +193,18 @@
             // btnReadExcel
             // 
             this.btnReadExcel.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnReadExcel.Location = new System.Drawing.Point(1493, 197);
+            this.btnReadExcel.Location = new System.Drawing.Point(1493, 232);
             this.btnReadExcel.Name = "btnReadExcel";
             this.btnReadExcel.Size = new System.Drawing.Size(94, 29);
             this.btnReadExcel.TabIndex = 4;
             this.btnReadExcel.Text = "Excel読込";
             this.btnReadExcel.UseVisualStyleBackColor = true;
-            this.btnReadExcel.Click += new System.EventHandler(this.btnReadExcel_Click);
+            this.btnReadExcel.Click += new System.EventHandler(this.btnReadExcel_ClickAsync);
             // 
             // btnCheck
             // 
             this.btnCheck.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCheck.Location = new System.Drawing.Point(1493, 232);
+            this.btnCheck.Location = new System.Drawing.Point(1493, 267);
             this.btnCheck.Name = "btnCheck";
             this.btnCheck.Size = new System.Drawing.Size(94, 29);
             this.btnCheck.TabIndex = 4;
@@ -220,7 +215,7 @@
             // btnClear
             // 
             this.btnClear.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClear.Location = new System.Drawing.Point(1493, 267);
+            this.btnClear.Location = new System.Drawing.Point(1493, 302);
             this.btnClear.Name = "btnClear";
             this.btnClear.Size = new System.Drawing.Size(94, 29);
             this.btnClear.TabIndex = 5;
@@ -228,27 +223,11 @@
             this.btnClear.UseVisualStyleBackColor = true;
             this.btnClear.Click += new System.EventHandler(this.btnClear_Click);
             // 
-            // statusStrip1
-            // 
-            this.statusStrip1.ImageScalingSize = new System.Drawing.Size(20, 20);
-            this.statusStrip1.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
-            this.toolStripProgressBar1});
-            this.statusStrip1.Location = new System.Drawing.Point(0, 682);
-            this.statusStrip1.Name = "statusStrip1";
-            this.statusStrip1.Size = new System.Drawing.Size(1599, 28);
-            this.statusStrip1.TabIndex = 6;
-            this.statusStrip1.Text = "statusStrip1";
-            // 
-            // toolStripProgressBar1
-            // 
-            this.toolStripProgressBar1.Name = "toolStripProgressBar1";
-            this.toolStripProgressBar1.Size = new System.Drawing.Size(150, 20);
-            // 
             // label4
             // 
             this.label4.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label4.AutoSize = true;
-            this.label4.Location = new System.Drawing.Point(65, 610);
+            this.label4.Location = new System.Drawing.Point(34, 645);
             this.label4.Name = "label4";
             this.label4.Size = new System.Drawing.Size(43, 20);
             this.label4.TabIndex = 2;
@@ -256,45 +235,58 @@
             // 
             // txtNodeUrl
             // 
-            this.txtNodeUrl.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.txtNodeUrl.Location = new System.Drawing.Point(118, 607);
+            this.txtNodeUrl.Location = new System.Drawing.Point(83, 642);
             this.txtNodeUrl.Name = "txtNodeUrl";
             this.txtNodeUrl.Size = new System.Drawing.Size(470, 27);
             this.txtNodeUrl.TabIndex = 1;
             // 
-            // comboBox1
+            // lblNetwork
             // 
-            this.comboBox1.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
-            this.comboBox1.FormattingEnabled = true;
-            this.comboBox1.Location = new System.Drawing.Point(118, 643);
-            this.comboBox1.Name = "comboBox1";
-            this.comboBox1.Size = new System.Drawing.Size(151, 28);
-            this.comboBox1.TabIndex = 7;
+            this.lblNetwork.AutoSize = true;
+            this.lblNetwork.Location = new System.Drawing.Point(116, 153);
+            this.lblNetwork.Name = "lblNetwork";
+            this.lblNetwork.Size = new System.Drawing.Size(0, 20);
+            this.lblNetwork.TabIndex = 7;
             // 
             // label5
             // 
-            this.label5.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left)));
             this.label5.AutoSize = true;
-            this.label5.Location = new System.Drawing.Point(32, 646);
+            this.label5.Location = new System.Drawing.Point(34, 153);
             this.label5.Name = "label5";
             this.label5.Size = new System.Drawing.Size(76, 20);
-            this.label5.TabIndex = 2;
+            this.label5.TabIndex = 8;
             this.label5.Text = "ネットワーク:";
+            // 
+            // progressBar1
+            // 
+            this.progressBar1.Location = new System.Drawing.Point(1227, 692);
+            this.progressBar1.Name = "progressBar1";
+            this.progressBar1.Size = new System.Drawing.Size(360, 20);
+            this.progressBar1.TabIndex = 9;
+            // 
+            // lblStatus
+            // 
+            this.lblStatus.AutoSize = true;
+            this.lblStatus.Location = new System.Drawing.Point(12, 695);
+            this.lblStatus.Name = "lblStatus";
+            this.lblStatus.Size = new System.Drawing.Size(0, 20);
+            this.lblStatus.TabIndex = 10;
             // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1599, 710);
-            this.Controls.Add(this.comboBox1);
-            this.Controls.Add(this.statusStrip1);
+            this.ClientSize = new System.Drawing.Size(1599, 724);
+            this.Controls.Add(this.lblStatus);
+            this.Controls.Add(this.progressBar1);
+            this.Controls.Add(this.label5);
+            this.Controls.Add(this.lblNetwork);
             this.Controls.Add(this.btnClear);
             this.Controls.Add(this.btnCheck);
             this.Controls.Add(this.btnReadExcel);
             this.Controls.Add(this.dataGridView1);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label3);
-            this.Controls.Add(this.label5);
             this.Controls.Add(this.label4);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.txtNodeUrl);
@@ -306,8 +298,6 @@
             this.Text = "nagexymsharp";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Form1_FormClosing);
             ((System.ComponentModel.ISupportInitialize)(this.dataGridView1)).EndInit();
-            this.statusStrip1.ResumeLayout(false);
-            this.statusStrip1.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -326,8 +316,6 @@
         private Button btnReadExcel;
         private Button btnCheck;
         private Button btnClear;
-        private StatusStrip statusStrip1;
-        private ToolStripProgressBar toolStripProgressBar1;
         private DataGridViewTextBoxColumn dghCheck;
         private DataGridViewTextBoxColumn dghAccountName;
         private DataGridViewTextBoxColumn dghTwitter;
@@ -337,7 +325,9 @@
         private DataGridViewTextBoxColumn dghMessage;
         private Label label4;
         private TextBox txtNodeUrl;
-        private ComboBox comboBox1;
+        private Label lblNetwork;
         private Label label5;
+        private ProgressBar progressBar1;
+        private Label lblStatus;
     }
 }
