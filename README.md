@@ -16,5 +16,9 @@ Macでは動かせないかと思いますm(__)m
 * 3.チェックOKだったアドレスに対してXymを送信
 * 4.完了＼(^o^)／
 
+# 注意
+**読み込むExcelファイルに画像や図形があると失敗します。
+画像や図形は纏めて削除してから取り込んで下さい。**
+
 ## SYMBOLタウンリスト
 https://docs.google.com/spreadsheets/d/1X2AsmEOXpMlwZ9r6yA-2sqEfTBpFnst_nF1nXhZjLCk/edit#gid=0
