@@ -204,7 +204,7 @@
             // btnCheck
             // 
             this.btnCheck.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnCheck.Location = new System.Drawing.Point(1493, 267);
+            this.btnCheck.Location = new System.Drawing.Point(1493, 302);
             this.btnCheck.Name = "btnCheck";
             this.btnCheck.Size = new System.Drawing.Size(94, 29);
             this.btnCheck.TabIndex = 4;
@@ -215,7 +215,7 @@
             // btnClear
             // 
             this.btnClear.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnClear.Location = new System.Drawing.Point(1493, 302);
+            this.btnClear.Location = new System.Drawing.Point(1493, 267);
             this.btnClear.Name = "btnClear";
             this.btnClear.Size = new System.Drawing.Size(94, 29);
             this.btnClear.TabIndex = 5;

@@ -6,12 +6,29 @@ using System.Threading.Tasks;
 
 namespace nagexym
 {
+    /// <summary>
+    /// 設定値を保持するためのクラス
+    /// </summary>
     internal class Settings
     {
-        internal static int EXCEL_COL_ACCOUNT = 1;
-        internal static int EXCEL_COL_TWITTER = 2;
-        internal static int EXCEL_COL_ADDRESS = 5;
-        internal static int EXCEL_COL_XYM = 7;
-        internal static int EXCEL_COL_MESSAGE = 8;
+        internal int ExcelColAccount { get; set; }
+        internal int ExcelColTwitter { get; set; }
+        internal int ExcelColAddress { get; set; }
+        internal int ExcelColXym { get; set; }
+        internal int ExcelColMessage { get; set; }
+
+        internal ulong Fee { get; set; }
+
+        internal int InnerTxCount { get; set; }
+        internal Settings()
+        {
+            ExcelColAccount = 1;
+            ExcelColTwitter = 2;
+            ExcelColAddress = 5;
+            ExcelColXym = 7;
+            ExcelColMessage = 8;
+            Fee= 1000000;
+            InnerTxCount= 49;
+        }
     }
 }
