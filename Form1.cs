@@ -7,7 +7,6 @@ using ClosedXML.Excel;
 using DocumentFormat.OpenXml.Spreadsheet;
 using Newtonsoft.Json.Linq;
 using Org.BouncyCastle.Utilities;
-using RestSharp;
 using System.Collections.Generic;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
@@ -528,7 +527,7 @@ namespace nagexym
 
             var payload = TransactionsFactory.CreatePayload(aggTx);
 
-            string node = txtNodeUrl.Text;
+            string node = Utils.TrimingLastSlash(txtNodeUrl.Text);
             using var client = new HttpClient();
             var content = new StringContent(payload, Encoding.UTF8, "application/json");
             var response = client.PutAsync(node + "/transactions", content).Result;
