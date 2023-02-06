@@ -34,5 +34,15 @@ namespace nagexym
 
             return namespaceId;
         }
+
+        /// <summary>
+        /// 末尾のスラッシュを削除する
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        internal static string TrimingLastSlash(string s)
+        {
+            return s.Trim('/');
+        }
     }
 }
