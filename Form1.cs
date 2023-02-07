@@ -29,7 +29,6 @@ namespace nagexym
         private const string GRID_COLNAME_CHECK = "dghCheck";
         #endregion
 
-
         /// <summary>
         /// アドレスの文字数
         /// </summary>
@@ -913,6 +912,19 @@ namespace nagexym
             }
 
             return true;
+        }
+        #endregion
+
+        #region メニューの設定ボタン
+        /// <summary>
+        /// 設定画面表示
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MenuItem_Click(object sender, EventArgs e)
+        {
+            var form = new SettingForm();
+            form.ShowDialog();
         }
         #endregion
     }
