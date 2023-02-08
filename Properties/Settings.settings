@@ -14,22 +14,22 @@
     <Setting Name="ExcelColCheck" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">10</Value>
     </Setting>
-    <Setting Name="ExcelColName" Type="System.String" Scope="User">
+    <Setting Name="ExcelColName" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">1</Value>
     </Setting>
-    <Setting Name="ExcelColTwitter" Type="System.String" Scope="User">
+    <Setting Name="ExcelColTwitter" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">2</Value>
     </Setting>
-    <Setting Name="ExcelColNamespace" Type="System.String" Scope="User">
+    <Setting Name="ExcelColNamespace" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">3</Value>
     </Setting>
-    <Setting Name="ExcelColAddress" Type="System.String" Scope="User">
+    <Setting Name="ExcelColAddress" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">6</Value>
     </Setting>
-    <Setting Name="ExcelColXym" Type="System.String" Scope="User">
+    <Setting Name="ExcelColXym" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">7</Value>
     </Setting>
-    <Setting Name="ExcelColMessage" Type="System.String" Scope="User">
+    <Setting Name="ExcelColMessage" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">8</Value>
     </Setting>
     <Setting Name="DefaultExcelColCheck" Type="System.Int32" Scope="User">
@@ -59,8 +59,8 @@
     <Setting Name="InnerTxCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">49</Value>
     </Setting>
-    <Setting Name="IsAggrigate" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
+    <Setting Name="IsAggrigate" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
     </Setting>
     <Setting Name="DefaultMaxFee" Type="System.Int64" Scope="User">
       <Value Profile="(Default)">1000000</Value>
@@ -68,8 +68,8 @@
     <Setting Name="DefaultInnerTxCount" Type="System.Int32" Scope="User">
       <Value Profile="(Default)">49</Value>
     </Setting>
-    <Setting Name="DefaultIsAggrigate" Type="System.Boolean" Scope="User">
-      <Value Profile="(Default)">True</Value>
+    <Setting Name="DefaultIsAggrigate" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
     </Setting>
   </Settings>
 </SettingsFile>

@@ -74,9 +74,9 @@ namespace nagexym.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("1")]
-        public string ExcelColName {
+        public int ExcelColName {
             get {
-                return ((string)(this["ExcelColName"]));
+                return ((int)(this["ExcelColName"]));
             }
             set {
                 this["ExcelColName"] = value;
@@ -86,9 +86,9 @@ namespace nagexym.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("2")]
-        public string ExcelColTwitter {
+        public int ExcelColTwitter {
             get {
-                return ((string)(this["ExcelColTwitter"]));
+                return ((int)(this["ExcelColTwitter"]));
             }
             set {
                 this["ExcelColTwitter"] = value;
@@ -98,9 +98,9 @@ namespace nagexym.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("3")]
-        public string ExcelColNamespace {
+        public int ExcelColNamespace {
             get {
-                return ((string)(this["ExcelColNamespace"]));
+                return ((int)(this["ExcelColNamespace"]));
             }
             set {
                 this["ExcelColNamespace"] = value;
@@ -110,9 +110,9 @@ namespace nagexym.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("6")]
-        public string ExcelColAddress {
+        public int ExcelColAddress {
             get {
-                return ((string)(this["ExcelColAddress"]));
+                return ((int)(this["ExcelColAddress"]));
             }
             set {
                 this["ExcelColAddress"] = value;
@@ -122,9 +122,9 @@ namespace nagexym.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("7")]
-        public string ExcelColXym {
+        public int ExcelColXym {
             get {
-                return ((string)(this["ExcelColXym"]));
+                return ((int)(this["ExcelColXym"]));
             }
             set {
                 this["ExcelColXym"] = value;
@@ -134,9 +134,9 @@ namespace nagexym.Properties {
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("8")]
-        public string ExcelColMessage {
+        public int ExcelColMessage {
             get {
-                return ((string)(this["ExcelColMessage"]));
+                return ((int)(this["ExcelColMessage"]));
             }
             set {
                 this["ExcelColMessage"] = value;
@@ -253,10 +253,10 @@ namespace nagexym.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool IsAggrigate {
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int IsAggrigate {
             get {
-                return ((bool)(this["IsAggrigate"]));
+                return ((int)(this["IsAggrigate"]));
             }
             set {
                 this["IsAggrigate"] = value;
@@ -289,10 +289,10 @@ namespace nagexym.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
-        public bool DefaultIsAggrigate {
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int DefaultIsAggrigate {
             get {
-                return ((bool)(this["DefaultIsAggrigate"]));
+                return ((int)(this["DefaultIsAggrigate"]));
             }
             set {
                 this["DefaultIsAggrigate"] = value;

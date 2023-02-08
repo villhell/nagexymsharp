@@ -915,13 +915,8 @@ namespace nagexym
         }
         #endregion
 
-        #region メニューの設定ボタン
-        /// <summary>
-        /// 設定画面表示
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void MenuItem_Click(object sender, EventArgs e)
+        #region 設定ボタン
+        private void btnSettings_Click(object sender, EventArgs e)
         {
             var form = new SettingForm();
             form.ShowDialog();
